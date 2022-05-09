@@ -156,6 +156,7 @@ static void ReadLinuxImage(PlaydateAPI* pd) {
 		pd->file->read(file, targetAddr, len);
 		pd->file->close(file);
 	}
+	uint32_t initrd_length = 0;
 	{
 	void* targetAddr = (void*)0x60f00000;
 #define INITRD_NAME "rootfs.cpio.gz"
@@ -173,6 +174,16 @@ static void ReadLinuxImage(PlaydateAPI* pd) {
 		pd->file->seek(file, 0, SEEK_SET);
 		pd->file->read(file, targetAddr, len);
 		pd->file->close(file);
+		initrd_length = len;
+	}
+	for (uint32_t* a = (uint32_t*)0x60ff0000; a < (uint32_t*)(0x60ff0000 + 0x10000); a++) {
+		uint32_t v = __builtin_bswap32(*a);
+		if (v == 0xdeadbeee) {
+			*a = __builtin_bswap32(0x60f00000);
+		} else if (v == 0xdeadbeef) {
+			*a = __builtin_bswap32(0x60f00000 + initrd_length);
+			break;
+		}
 	}
 }
 #endif
